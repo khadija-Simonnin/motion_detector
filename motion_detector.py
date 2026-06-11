@@ -1,5 +1,7 @@
 import cv2
 
+MOTION_THRESHOLD = 2000
+
 camera = cv2.VideoCapture(0)
 
 if not camera.isOpened():
@@ -26,7 +28,13 @@ while True:
 
     _, thresh = cv2.threshold(diff, 20, 255, cv2.THRESH_BINARY)
 
-    cv2.imshow("Motion Detector", thresh)
+    movement = cv2.countNonZero(thresh)
+
+    if movement > MOTION_THRESHOLD:
+        print("Motion detected!")
+        cv2.putText(frame2, "MOTION DETECTED", (50, 50),cv2.FONT_HERSHEY_SIMPLEX, 1,(0, 0, 255), 2)
+    
+    cv2.imshow("Motion Detector", frame2)
 
     frame1_gray = gray
 
