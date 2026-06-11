@@ -6,17 +6,32 @@ if not camera.isOpened():
     print("Unable to access camera")
     exit()
 
+ret, frame1 = camera.read()
+if not ret:
+    print("Failed to read camera")
+    exit()
+
+frame1_gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+
 while True:
 
-    success, frame = camera.read()
+    ret, frame2 = camera.read()
 
-    if not success:
+    if not ret:
         break
 
-    cv2.imshow("Motion Detector", frame)
+    gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    if cv2.waitKey(1) == 27:
+    diff = cv2.absdiff(frame1_gray, gray)
+
+    _, thresh = cv2.threshold(diff, 20, 255, cv2.THRESH_BINARY)
+
+    cv2.imshow("Motion Detector", thresh)
+
+    frame1_gray = gray
+
+    if cv2.waitKey(1) & 0xFF == 27:
         break
-
+    
 camera.release()
 cv2.destroyAllWindows()
