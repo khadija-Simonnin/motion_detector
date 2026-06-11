@@ -19,6 +19,8 @@ motion_frames = 0
 recording = False
 video_writer = None
 
+motion_active = False
+
 while True:
 
     ret, frame2 = camera.read()
@@ -27,28 +29,30 @@ while True:
 
     gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    # Noise filtering
+    # Noise reduction
     blur1 = cv2.GaussianBlur(frame1_gray, (5, 5), 0)
     blur2 = cv2.GaussianBlur(gray, (5, 5), 0)
 
-    # Frame differencing 
+    # Frame difference
     diff = cv2.absdiff(blur1, blur2)
 
     _, thresh = cv2.threshold(diff, 20, 255, cv2.THRESH_BINARY)
 
     movement = cv2.countNonZero(thresh)
 
-    # Motion stability  
     if movement > MOTION_THRESHOLD:
         motion_frames += 1
     else:
-        motion_frames = 0
+        motion_frames = max(0, motion_frames - 1)
 
-    # Stable motion detection
-    if motion_frames > 3:
+    if motion_frames > 3 and not motion_active:
         print("Real motion detected")
+        motion_active = True
 
-    # Start recording 
+    elif motion_frames <= 3:
+        motion_active = False
+
+    # Start recording
     if motion_frames > 3 and not recording:
         recording = True
         video_writer = cv2.VideoWriter(
@@ -59,20 +63,20 @@ while True:
         )
         print("Recording started")
 
-    # Stop recording 
+    # Stop recording
     elif motion_frames <= 3 and recording:
         recording = False
         video_writer.release()
         video_writer = None
         print("Recording stopped")
 
-    # Save video frames 
+    # Save frames
     if recording:
         video_writer.write(frame2)
 
+    # Display
     cv2.imshow("Motion Detector", frame2)
 
-    # update previous frame
     frame1_gray = gray
 
     if cv2.waitKey(1) & 0xFF == 27:
