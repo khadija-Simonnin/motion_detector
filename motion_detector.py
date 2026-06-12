@@ -1,4 +1,11 @@
 import cv2
+import csv
+import time
+
+csv_file = open("events.csv", "w", newline="")
+csv_writer = csv.writer(csv_file)
+
+csv_writer.writerow(["timestamp", "event"])
 
 MOTION_THRESHOLD = 2000
 
@@ -68,11 +75,14 @@ while True:
         motion_frames = max(0, motion_frames - 1)
 
     if motion_frames > 3 and not motion_active:
-        print("Real motion detected")
+        csv_writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), "motion_start"])
+        csv_file.flush()
         motion_active = True
 
     elif motion_frames <= 3:
         motion_active = False
+        csv_writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), "motion_stop"])
+        csv_file.flush()
 
     if motion_frames > 3 and not recording:
 
@@ -132,4 +142,5 @@ if video_writer is not None:
     video_writer.release()
 
 camera.release()
+csv_file.close()
 cv2.destroyAllWindows()
