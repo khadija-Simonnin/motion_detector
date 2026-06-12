@@ -34,11 +34,13 @@ csv_writer = csv.writer(csv_file)
 csv_writer.writerow(["timestamp", "event"])
 
 motion_frames = 0
-motion_active = False
 previous_motion_state = False
 
 recording = False
 video_writer = None
+
+last_event_time = 0
+min_delay = 2
 
 while True:
 
@@ -53,7 +55,6 @@ while True:
         detection_x:detection_x + detection_width
     ]
 
-    # Noise reduction
     blur1 = cv2.GaussianBlur(frame1_gray, (5, 5), 0)
     blur2 = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -68,22 +69,25 @@ while True:
         motion_frames = max(0, motion_frames - 1)
 
     current_motion_state = motion_frames > 3
-    
+    current_time = time.time()
+
     if current_motion_state and not previous_motion_state:
-        print("Motion START")
-        csv_writer.writerow([
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-            "motion_start"
-        ])
-        csv_file.flush()
+        if current_time - last_event_time > min_delay:
+            csv_writer.writerow([
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+                "motion_start"
+            ])
+            csv_file.flush()
+            last_event_time = current_time
 
     elif not current_motion_state and previous_motion_state:
-        print("Motion STOP")
-        csv_writer.writerow([
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-            "motion_stop"
-        ])
-        csv_file.flush()
+        if current_time - last_event_time > min_delay:
+            csv_writer.writerow([
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+                "motion_stop"
+            ])
+            csv_file.flush()
+            last_event_time = current_time
 
     previous_motion_state = current_motion_state
 
@@ -95,13 +99,11 @@ while True:
             20,
             (frame2.shape[1], frame2.shape[0])
         )
-        print("Recording started")
 
     elif not current_motion_state and recording:
         recording = False
         video_writer.release()
         video_writer = None
-        print("Recording stopped")
 
     if recording:
         video_writer.write(frame2)
@@ -114,11 +116,22 @@ while True:
         2
     )
 
+    if current_motion_state:
+        cv2.putText(
+            frame2,
+            "MOTION DETECTED",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 255),
+            2
+        )
+
     if recording:
         cv2.putText(
             frame2,
             "RECORDING",
-            (20, 40),
+            (20, 80),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             (0, 0, 255),
