@@ -9,31 +9,53 @@ if not camera.isOpened():
     exit()
 
 ret, frame1 = camera.read()
+
 if not ret:
     print("Failed to read camera")
     exit()
 
+# Zone de détection
+detection_x = 100
+detection_y = 100
+
+frame_h, frame_w = frame1.shape[:2]
+
+detection_width = 400
+detection_height = 300
+
+detection_x = (frame_w - detection_width) // 2
+detection_y = (frame_h - detection_height) // 2
+
 frame1_gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
 
+frame1_gray = frame1_gray[
+    detection_y:detection_y + detection_height,
+    detection_x:detection_x + detection_width
+]
+
 motion_frames = 0
+motion_active = False
+
 recording = False
 video_writer = None
-
-motion_active = False
 
 while True:
 
     ret, frame2 = camera.read()
+
     if not ret:
         break
 
-    gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+    gray_full = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    # Noise reduction
+    gray = gray_full[
+        detection_y:detection_y + detection_height,
+        detection_x:detection_x + detection_width
+    ]
+
     blur1 = cv2.GaussianBlur(frame1_gray, (5, 5), 0)
     blur2 = cv2.GaussianBlur(gray, (5, 5), 0)
 
-    # Frame difference
     diff = cv2.absdiff(blur1, blur2)
 
     _, thresh = cv2.threshold(diff, 20, 255, cv2.THRESH_BINARY)
@@ -52,35 +74,62 @@ while True:
     elif motion_frames <= 3:
         motion_active = False
 
-    # Start recording
     if motion_frames > 3 and not recording:
+
         recording = True
+
         video_writer = cv2.VideoWriter(
             "motion_output.mp4",
             cv2.VideoWriter_fourcc(*"mp4v"),
             20,
             (frame2.shape[1], frame2.shape[0])
         )
+
         print("Recording started")
 
-    # Stop recording
     elif motion_frames <= 3 and recording:
+
         recording = False
+
         video_writer.release()
         video_writer = None
+
         print("Recording stopped")
 
-    # Save frames
     if recording:
         video_writer.write(frame2)
 
-    # Display
+    cv2.rectangle(
+        frame2,
+        (detection_x, detection_y),
+        (
+            detection_x + detection_width,
+            detection_y + detection_height
+        ),
+        (0, 255, 0),
+        2
+    )
+
+    if recording:
+        cv2.putText(
+            frame2,
+            "RECORDING",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 255),
+            2
+        )
+
     cv2.imshow("Motion Detector", frame2)
 
-    frame1_gray = gray
+    frame1_gray = gray.copy()
 
     if cv2.waitKey(1) & 0xFF == 27:
         break
+
+if video_writer is not None:
+    video_writer.release()
 
 camera.release()
 cv2.destroyAllWindows()
