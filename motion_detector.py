@@ -42,6 +42,9 @@ video_writer = None
 last_event_time = 0
 min_delay = 2
 
+motion_count = 0
+start_time = time.time()
+
 while True:
 
     ret, frame2 = camera.read()
@@ -78,6 +81,7 @@ while True:
                 "motion_start"
             ])
             csv_file.flush()
+            motion_count += 1
             last_event_time = current_time
 
     elif not current_motion_state and previous_motion_state:
@@ -137,6 +141,16 @@ while True:
             (0, 0, 255),
             2
         )
+        
+    cv2.putText(frame2, f"MOV/MIN: {motion_count}", (20, 120),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    
+    elapsed = time.time() - start_time
+    if elapsed >= 60:
+        print(f"Movements per minute: {motion_count}")
+        motion_count = 0
+        start_time = time.time()
+
 
     cv2.imshow("Motion Detector", frame2)
 
