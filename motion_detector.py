@@ -45,6 +45,8 @@ start_time = time.time()
 
 history = collections.deque(maxlen=5)
 
+font = cv2.FONT_HERSHEY_SIMPLEX
+
 while True:
 
     ret, frame2 = camera.read()
@@ -77,6 +79,14 @@ while True:
         motion_frames = max(0, motion_frames - 1)
 
     current_motion_state = motion_frames > 3
+
+    if recording:
+        status = "RECORDING"
+    elif current_motion_state:
+        status = "MOTION"
+    else:
+        status = "IDLE"
+
     current_time = time.time()
 
     if current_motion_state and not previous_motion_state:
@@ -121,16 +131,16 @@ while True:
         2
     )
 
-    if current_motion_state:
-        cv2.putText(frame2, "MOTION DETECTED", (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.rectangle(frame2, (10, 10), (260, 150), (0, 0, 0), -1)
 
-    if recording:
-        cv2.putText(frame2, "RECORDING", (20, 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(frame2, f"STATUS: {status}", (20, 40),
+                font, 0.7, (255, 255, 255), 2)
 
-    cv2.putText(frame2, f"MOV: {motion_count}", (20, 120),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    cv2.putText(frame2, f"MOVES: {motion_count}", (20, 70),
+                font, 0.7, (255, 255, 255), 2)
+
+    cv2.putText(frame2, f"RECORDING: {recording}", (20, 100),
+                font, 0.7, (255, 255, 255), 2)
 
     cv2.imshow("Motion Detector", frame2)
 
