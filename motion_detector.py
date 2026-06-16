@@ -1,6 +1,7 @@
 import cv2
 import csv
 import time
+import collections
 
 MOTION_THRESHOLD = 2000
 
@@ -39,12 +40,10 @@ previous_motion_state = False
 recording = False
 video_writer = None
 
-last_event_time = 0
-min_delay = 2
-
 motion_count = 0
-movement_events = 0
 start_time = time.time()
+
+history = collections.deque(maxlen=5)
 
 while True:
 
@@ -68,9 +67,12 @@ while True:
     movement = cv2.countNonZero(thresh)
 
     motion_triggered = movement > MOTION_THRESHOLD
-  
-    if motion_triggered and not previous_motion_state:
-        movement_events += 1
+
+    history.append(motion_triggered)
+    stable_motion = sum(history) > 3
+
+    if stable_motion:
+        motion_frames += 1
     else:
         motion_frames = max(0, motion_frames - 1)
 
@@ -78,23 +80,19 @@ while True:
     current_time = time.time()
 
     if current_motion_state and not previous_motion_state:
-        if current_time - last_event_time > min_delay:
-            csv_writer.writerow([
-                time.strftime("%Y-%m-%d %H:%M:%S"),
-                "motion_start"
-            ])
-            csv_file.flush()
-            motion_count += 1
-            last_event_time = current_time
+        csv_writer.writerow([
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            "motion_start"
+        ])
+        csv_file.flush()
+        motion_count += 1
 
     elif not current_motion_state and previous_motion_state:
-        if current_time - last_event_time > min_delay:
-            csv_writer.writerow([
-                time.strftime("%Y-%m-%d %H:%M:%S"),
-                "motion_stop"
-            ])
-            csv_file.flush()
-            last_event_time = current_time
+        csv_writer.writerow([
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            "motion_stop"
+        ])
+        csv_file.flush()
 
     previous_motion_state = current_motion_state
 
@@ -130,16 +128,9 @@ while True:
     if recording:
         cv2.putText(frame2, "RECORDING", (20, 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-    
-    cv2.putText(frame2, f"MOV/MIN: {movement_events}", (20, 120),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
-    elapsed = time.time() - start_time
-        
-    if elapsed >= 60:
-        print(f"Movements per minute: {movement_events}")
-        movement_events = 0
-        start_time = time.time()
+    cv2.putText(frame2, f"MOV: {motion_count}", (20, 120),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
     cv2.imshow("Motion Detector", frame2)
 
