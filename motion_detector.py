@@ -43,6 +43,7 @@ last_event_time = 0
 min_delay = 2
 
 motion_count = 0
+movement_events = 0
 start_time = time.time()
 
 while True:
@@ -67,9 +68,9 @@ while True:
     movement = cv2.countNonZero(thresh)
 
     motion_triggered = movement > MOTION_THRESHOLD
-
-    if motion_triggered:
-        motion_frames += 1
+  
+    if motion_triggered and not previous_motion_state:
+        movement_events += 1
     else:
         motion_frames = max(0, motion_frames - 1)
 
@@ -129,14 +130,15 @@ while True:
     if recording:
         cv2.putText(frame2, "RECORDING", (20, 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-    cv2.putText(frame2, f"MOV/MIN: {motion_count}", (20, 120),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    
+    cv2.putText(frame2, f"MOV/MIN: {movement_events}", (20, 120),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
     elapsed = time.time() - start_time
+        
     if elapsed >= 60:
-        print(f"Movements per minute: {motion_count}")
-        motion_count = 0
+        print(f"Movements per minute: {movement_events}")
+        movement_events = 0
         start_time = time.time()
 
     cv2.imshow("Motion Detector", frame2)
