@@ -2,6 +2,13 @@ import cv2
 import csv
 import time
 import collections
+import os
+
+def beep_start():
+    os.system("afplay /System/Library/Sounds/Ping.aiff")
+
+def beep_stop():
+    os.system("afplay /System/Library/Sounds/Bottle.aiff")
 
 MOTION_THRESHOLD = 2000
 
@@ -90,6 +97,7 @@ while True:
     current_time = time.time()
 
     if current_motion_state and not previous_motion_state:
+        beep_start()
         csv_writer.writerow([
             time.strftime("%Y-%m-%d %H:%M:%S"),
             "motion_start"
@@ -98,6 +106,7 @@ while True:
         motion_count += 1
 
     elif not current_motion_state and previous_motion_state:
+        beep_stop()
         csv_writer.writerow([
             time.strftime("%Y-%m-%d %H:%M:%S"),
             "motion_stop"
